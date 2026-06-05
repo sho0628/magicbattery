@@ -56,7 +56,7 @@ html, body {
 /* 本体の上部バーと重ならないよう画面中央寄りに表示する */
 .dynamic-island {
   position: fixed;
-  top: 8%;
+  top: 13%;
   left: 50%;
   transform: translate(-50%, -50%) scale(.7);
   width: 132px;

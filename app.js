@@ -14,7 +14,7 @@ const DEFAULTS = {
   showClock: true,   // 時計・日付を表示するか
   showStatusbar: false,// ニセのステータスバー(電波・電池)を表示するか(既定OFF=本体のバーを使う)
   startScreen: 'lock',// 'lock' | 'black' 起動時の画面
-  chargePos: 8,      // 充電表示の縦位置(%・0=上 〜 100=下)
+  chargePos: 13,     // 充電表示の縦位置(%・0=上 〜 100=下)。本体バーに被らない位置を既定に
   timeFormat: 'auto',// 'auto' | '12' | '24'
 };
 
