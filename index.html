@@ -161,6 +161,13 @@
         </select>
       </label>
 
+      <div class="setup-field">
+        <div class="setup-field-title">充電表示の縦位置</div>
+        <span class="hint">0=画面の上(本体アイランド付近) 〜 100=下。実機を見ながら本体のバーと重ならない位置に</span>
+        <input type="range" id="in-chargepos" min="0" max="100" step="1" />
+        <span class="range-val" id="chargepos-val"></span>
+      </div>
+
       <label>時刻の表示形式
         <span class="hint">実機の設定に合わせる。迷ったら「自動」</span>
         <select id="in-timeformat">
@@ -171,6 +178,7 @@
       </label>
 
       <div class="setup-buttons">
+        <button id="btn-test" class="secondary">保存して充電を試す</button>
         <button id="btn-start" class="primary">保存して待受へ</button>
       </div>
 

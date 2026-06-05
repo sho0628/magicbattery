@@ -14,6 +14,7 @@ const DEFAULTS = {
   showClock: true,   // 時計・日付を表示するか
   showStatusbar: false,// ニセのステータスバー(電波・電池)を表示するか(既定OFF=本体のバーを使う)
   startScreen: 'lock',// 'lock' | 'black' 起動時の画面
+  chargePos: 8,      // 充電表示の縦位置(%・0=上 〜 100=下)
   timeFormat: 'auto',// 'auto' | '12' | '24'
 };
 
@@ -129,6 +130,7 @@ function applyLockscreen() {
   lsDim.style.opacity = (settings.dim || 0) / 100;
   clockEl.style.display = settings.showClock ? '' : 'none';
   statusbarEl.style.display = settings.showStatusbar ? '' : 'none';
+  diIsland.style.top = (settings.chargePos != null ? settings.chargePos : 8) + '%';
 }
 
 /* ====== 黒画面へ戻す ====== */
@@ -344,6 +346,8 @@ function openSetup() {
   $('in-flash').checked = settings.flash;
   $('in-dim').value = settings.dim;
   $('dim-val').textContent = settings.dim;
+  $('in-chargepos').value = settings.chargePos;
+  $('chargepos-val').textContent = settings.chargePos + '%';
   $('in-showclock').checked = settings.showClock;
   $('in-showsb').checked = settings.showStatusbar;
   $('in-startscreen').value = settings.startScreen;
@@ -404,7 +408,13 @@ $('in-dim').addEventListener('input', (e) => {
   $('dim-val').textContent = e.target.value;
 });
 
-function closeSetupAndStart() {
+// 充電表示の縦位置スライダー(動かすとプレビューも追従)
+$('in-chargepos').addEventListener('input', (e) => {
+  $('chargepos-val').textContent = e.target.value + '%';
+  diIsland.style.top = e.target.value + '%';
+});
+
+function readFormAndSave() {
   settings.realBattery = clampNum($('in-real').value, 1, 100, DEFAULTS.realBattery);
   settings.startDiff = clampNum($('in-diff').value, 0, 20, DEFAULTS.startDiff);
   settings.delaySec = clampNum($('in-delay').value, 0, 30, DEFAULTS.delaySec, true);
@@ -413,15 +423,29 @@ function closeSetupAndStart() {
   settings.sound = $('in-sound').checked;
   settings.flash = $('in-flash').checked;
   settings.dim = clampNum($('in-dim').value, 0, 80, DEFAULTS.dim);
+  settings.chargePos = clampNum($('in-chargepos').value, 0, 100, DEFAULTS.chargePos);
   settings.showClock = $('in-showclock').checked;
   settings.showStatusbar = $('in-showsb').checked;
   settings.startScreen = $('in-startscreen').value;
   settings.timeFormat = $('in-timeformat').value;
   updateClock();
   saveSettings(settings);
+}
 
+function closeSetupAndStart() {
+  readFormAndSave();
   setupPanel.classList.remove('open');
   goBlack();
+}
+
+// 設定を保存して、すぐに充電演出を再生(位置・速度の確認用)
+function testCharge() {
+  readFormAndSave();
+  setupPanel.classList.remove('open');
+  goBlack();
+  unlockAudio();
+  state = STATE.ARMED;
+  setTimeout(startCharging, 400);
 }
 function clampNum(v, min, max, fallback, allowFloat) {
   let n = allowFloat ? parseFloat(v) : parseInt(v, 10);
@@ -429,6 +453,7 @@ function clampNum(v, min, max, fallback, allowFloat) {
   return Math.max(min, Math.min(max, n));
 }
 $('btn-start').addEventListener('click', closeSetupAndStart);
+$('btn-test').addEventListener('click', testCharge);
 
 /* ====== 初期化 ====== */
 goBlack();

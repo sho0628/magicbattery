@@ -56,7 +56,7 @@ html, body {
 /* 本体の上部バーと重ならないよう画面中央寄りに表示する */
 .dynamic-island {
   position: fixed;
-  top: 58%;
+  top: 8%;
   left: 50%;
   transform: translate(-50%, -50%) scale(.7);
   width: 132px;
@@ -376,6 +376,18 @@ html, body {
   font-weight: 600;
 }
 .setup-card button.primary:active { background: #0062cc; }
+.setup-card button.secondary {
+  width: 100%;
+  background: #e8e8ed;
+  color: #007aff;
+  border: none;
+  border-radius: 13px;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.setup-card button.secondary:active { background: #dcdce1; }
 
 .setup-howto {
   margin-top: 26px;
