@@ -18,6 +18,8 @@
 
   <!-- ===== ロック画面(iOS風) ===== -->
   <div id="lockscreen">
+    <!-- 壁紙の上の暗さ調整 -->
+    <div class="ls-dim" id="ls-dim"></div>
     <!-- ステータスバー -->
     <div class="statusbar">
       <div class="sb-left"><span id="sb-time">9:41</span></div>
@@ -112,6 +114,29 @@
       <label class="row">
         <span>隅の光で合図(iPhone用)</span>
         <input type="checkbox" id="in-flash" />
+      </label>
+
+      <div class="setup-field">
+        <div class="setup-field-title">ロック画面の壁紙</div>
+        <span class="hint">実機のロック画面と同じ写真にすると自然です</span>
+        <div class="wallpaper-preview" id="wallpaper-preview"></div>
+        <div class="wallpaper-buttons">
+          <label class="wp-btn" for="in-wallpaper">画像を選ぶ</label>
+          <input type="file" id="in-wallpaper" accept="image/*" hidden />
+          <button type="button" class="wp-btn wp-clear" id="btn-wallpaper-clear">壁紙を消す</button>
+        </div>
+      </div>
+
+      <div class="setup-field">
+        <div class="setup-field-title">画面の暗さ(壁紙の上の黒さ)</div>
+        <span class="hint">文字を読みやすく。0=暗くしない 〜 80=かなり暗い</span>
+        <input type="range" id="in-dim" min="0" max="80" step="5" />
+        <span class="range-val" id="dim-val"></span>
+      </div>
+
+      <label class="row">
+        <span>時計・日付を表示</span>
+        <input type="checkbox" id="in-showclock" />
       </label>
 
       <div class="setup-buttons">

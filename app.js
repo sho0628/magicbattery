@@ -9,6 +9,9 @@ const DEFAULTS = {
   vibrate: true,
   sound: true,
   flash: true,       // iPhone用・隅の光合図
+  wallpaper: null,   // ロック画面の壁紙(dataURL)
+  dim: 25,           // 壁紙の上の暗さ(0〜80)
+  showClock: true,   // 時計・日付を表示するか
 };
 
 const LS_KEY = 'magicChargeSettings';
@@ -22,7 +25,16 @@ function loadSettings() {
   }
 }
 function saveSettings(s) {
-  localStorage.setItem(LS_KEY, JSON.stringify(s));
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(s));
+  } catch (e) {
+    // 容量超過(壁紙が大きすぎる等)。壁紙なしで再保存を試みる
+    try {
+      const copy = Object.assign({}, s, { wallpaper: null });
+      localStorage.setItem(LS_KEY, JSON.stringify(copy));
+      alert('画像が大きすぎて壁紙を保存できませんでした。別の画像をお試しください。');
+    } catch (e2) { /* どうしようもない */ }
+  }
 }
 
 let settings = loadSettings();
@@ -39,6 +51,9 @@ const blackout = $('blackout');
 const armFlash = $('arm-flash');
 const setupPanel = $('setup-panel');
 const setupCorner = $('setup-corner');
+const lockscreen = $('lockscreen');
+const lsDim = $('ls-dim');
+const clockEl = document.querySelector('.clock');
 
 const sbBattery = $('sb-battery');
 const sbBattNum = $('sb-batt-num');
@@ -71,6 +86,17 @@ function setBatteryDisplay(pct) {
   chargePercent.textContent = pct + '%';
 }
 
+/* ====== ロック画面の見た目を反映 ====== */
+function applyLockscreen() {
+  if (settings.wallpaper) {
+    lockscreen.style.backgroundImage = `url(${settings.wallpaper})`;
+  } else {
+    lockscreen.style.backgroundImage = '';
+  }
+  lsDim.style.opacity = (settings.dim || 0) / 100;
+  clockEl.style.display = settings.showClock ? '' : 'none';
+}
+
 /* ====== 黒画面へ戻す ====== */
 function goBlack() {
   state = STATE.BLACK;
@@ -80,6 +106,7 @@ function goBlack() {
   blackout.classList.remove('hidden');
   chargeIndicator.classList.remove('show');
   sbBattery.classList.remove('charging');
+  applyLockscreen();
 
   // 開始残量(実際 − 下げる量)をセット
   const startPct = settings.realBattery - settings.startDiff;
@@ -259,8 +286,64 @@ function openSetup() {
   $('in-vibrate').checked = settings.vibrate;
   $('in-sound').checked = settings.sound;
   $('in-flash').checked = settings.flash;
+  $('in-dim').value = settings.dim;
+  $('dim-val').textContent = settings.dim;
+  $('in-showclock').checked = settings.showClock;
+  updateWallpaperPreview();
   setupPanel.classList.add('open');
 }
+
+/* 壁紙プレビュー表示 */
+function updateWallpaperPreview() {
+  const pv = $('wallpaper-preview');
+  if (settings.wallpaper) {
+    pv.style.backgroundImage = `url(${settings.wallpaper})`;
+    pv.classList.remove('empty');
+  } else {
+    pv.style.backgroundImage = '';
+    pv.classList.add('empty');
+  }
+}
+
+/* 画像を縮小してdataURL化(localStorage節約) */
+function fileToScaledDataURL(file, maxW, maxH, cb) {
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = () => { img.src = reader.result; };
+  img.onload = () => {
+    let { width, height } = img;
+    const ratio = Math.min(maxW / width, maxH / height, 1);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    cb(canvas.toDataURL('image/jpeg', 0.82));
+  };
+  reader.readAsDataURL(file);
+}
+
+// 壁紙の選択
+$('in-wallpaper').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  fileToScaledDataURL(file, 1242, 2208, (dataURL) => {
+    settings.wallpaper = dataURL;
+    updateWallpaperPreview();
+  });
+  e.target.value = ''; // 同じファイルを再選択できるように
+});
+
+// 壁紙を消す
+$('btn-wallpaper-clear').addEventListener('click', () => {
+  settings.wallpaper = null;
+  updateWallpaperPreview();
+});
+
+// 暗さスライダー
+$('in-dim').addEventListener('input', (e) => {
+  $('dim-val').textContent = e.target.value;
+});
 
 function closeSetupAndStart() {
   settings.realBattery = clampNum($('in-real').value, 1, 100, DEFAULTS.realBattery);
@@ -270,6 +353,8 @@ function closeSetupAndStart() {
   settings.vibrate = $('in-vibrate').checked;
   settings.sound = $('in-sound').checked;
   settings.flash = $('in-flash').checked;
+  settings.dim = clampNum($('in-dim').value, 0, 80, DEFAULTS.dim);
+  settings.showClock = $('in-showclock').checked;
   saveSettings(settings);
 
   setupPanel.classList.remove('open');
