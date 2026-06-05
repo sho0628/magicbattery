@@ -400,20 +400,25 @@ html, body {
 }
 .wallpaper-preview.empty::after { content: "壁紙なし(初期の暗い背景)"; }
 .wallpaper-buttons { display: flex; gap: 10px; }
-.wp-btn {
+/* 汎用 .setup-card label より優先度を上げる(白背景に負けないように) */
+.setup-card .wp-btn {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   background: #007aff;
   color: #fff;
   border: none;
   border-radius: 10px;
-  padding: 11px;
+  padding: 13px;
+  margin: 0;
   font-size: 15px;
   font-weight: 600;
 }
-.wp-btn:active { background: #0062cc; }
-.wp-clear { background: #e2e2e7; color: #1c1c1e; }
-.wp-clear:active { background: #d2d2d7; }
+.setup-card .wp-btn:active { background: #0062cc; }
+.setup-card .wp-clear { background: #e2e2e7; color: #1c1c1e; }
+.setup-card .wp-clear:active { background: #d2d2d7; }
 
 .setup-field input[type="range"] {
   width: 100%;
