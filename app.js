@@ -12,6 +12,7 @@ const DEFAULTS = {
   wallpaper: null,   // ロック画面の壁紙(dataURL)
   dim: 25,           // 壁紙の上の暗さ(0〜80)
   showClock: true,   // 時計・日付を表示するか
+  showStatusbar: true,// ニセのステータスバー(電波・電池)を表示するか
   timeFormat: 'auto',// 'auto' | '12' | '24'
 };
 
@@ -118,11 +119,15 @@ function setBatteryDisplay(pct) {
 function applyLockscreen() {
   if (settings.wallpaper) {
     lockscreen.style.backgroundImage = `url(${settings.wallpaper})`;
+    // 保険:下の安全領域に黒帯が出ないよう body にも同じ壁紙を敷く
+    document.body.style.backgroundImage = `url(${settings.wallpaper})`;
   } else {
     lockscreen.style.backgroundImage = '';
+    document.body.style.backgroundImage = '';
   }
   lsDim.style.opacity = (settings.dim || 0) / 100;
   clockEl.style.display = settings.showClock ? '' : 'none';
+  statusbarEl.style.display = settings.showStatusbar ? '' : 'none';
 }
 
 /* ====== 黒画面へ戻す ====== */
@@ -329,6 +334,7 @@ function openSetup() {
   $('in-dim').value = settings.dim;
   $('dim-val').textContent = settings.dim;
   $('in-showclock').checked = settings.showClock;
+  $('in-showsb').checked = settings.showStatusbar;
   $('in-timeformat').value = settings.timeFormat;
   updateWallpaperPreview();
   setupPanel.classList.add('open');
@@ -396,6 +402,7 @@ function closeSetupAndStart() {
   settings.flash = $('in-flash').checked;
   settings.dim = clampNum($('in-dim').value, 0, 80, DEFAULTS.dim);
   settings.showClock = $('in-showclock').checked;
+  settings.showStatusbar = $('in-showsb').checked;
   settings.timeFormat = $('in-timeformat').value;
   updateClock();
   saveSettings(settings);
