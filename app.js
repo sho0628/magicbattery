@@ -1,0 +1,295 @@
+'use strict';
+
+/* ====== 設定 ====== */
+const DEFAULTS = {
+  realBattery: 80,   // 実際のiPhone残量(%)
+  startDiff: 2,      // 開始時に下げる量(%)
+  delaySec: 5,       // 長押し→充電開始までの遅延(秒)
+  chargeSec: 8,      // 下げた分を戻すのにかける時間(秒)
+  vibrate: true,
+  sound: true,
+  flash: true,       // iPhone用・隅の光合図
+};
+
+const LS_KEY = 'magicChargeSettings';
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY));
+    return Object.assign({}, DEFAULTS, s || {});
+  } catch (e) {
+    return Object.assign({}, DEFAULTS);
+  }
+}
+function saveSettings(s) {
+  localStorage.setItem(LS_KEY, JSON.stringify(s));
+}
+
+let settings = loadSettings();
+
+/* ====== 状態 ====== */
+const STATE = { BLACK: 'black', ARMED: 'armed', CHARGING: 'charging' };
+let state = STATE.BLACK;
+let armTimer = null;
+let chargeAnimId = null;
+
+/* ====== 要素 ====== */
+const $ = (id) => document.getElementById(id);
+const blackout = $('blackout');
+const armFlash = $('arm-flash');
+const setupPanel = $('setup-panel');
+const setupCorner = $('setup-corner');
+
+const sbBattery = $('sb-battery');
+const sbBattNum = $('sb-batt-num');
+const sbBattFill = $('sb-batt-fill');
+const chargeIndicator = $('charge-indicator');
+const chargeFill = $('charge-battery-fill');
+const chargePercent = $('charge-percent');
+
+/* ====== 時計 ====== */
+const WEEK = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours();
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const t = `${h}:${m}`;
+  $('clock-time').textContent = t;
+  $('sb-time').textContent = t;
+  $('clock-date').textContent =
+    `${now.getMonth() + 1}月${now.getDate()}日 ${WEEK[now.getDay()]}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ====== バッテリー表示 ====== */
+function setBatteryDisplay(pct) {
+  pct = Math.max(0, Math.min(100, Math.round(pct)));
+  sbBattNum.textContent = pct + '%';
+  sbBattFill.style.width = pct + '%';
+  chargeFill.style.width = pct + '%';
+  chargePercent.textContent = pct + '%';
+}
+
+/* ====== 黒画面へ戻す ====== */
+function goBlack() {
+  state = STATE.BLACK;
+  if (armTimer) { clearTimeout(armTimer); armTimer = null; }
+  if (chargeAnimId) { cancelAnimationFrame(chargeAnimId); chargeAnimId = null; }
+
+  blackout.classList.remove('hidden');
+  chargeIndicator.classList.remove('show');
+  sbBattery.classList.remove('charging');
+
+  // 開始残量(実際 − 下げる量)をセット
+  const startPct = settings.realBattery - settings.startDiff;
+  setBatteryDisplay(startPct);
+}
+
+/* ====== セット完了の合図 ====== */
+function armConfirm() {
+  if (settings.vibrate && navigator.vibrate) {
+    navigator.vibrate(60); // Androidのみ。iOSは無反応
+  }
+  if (settings.flash) {
+    armFlash.classList.remove('flash');
+    void armFlash.offsetWidth; // リフロー
+    armFlash.classList.add('flash');
+  }
+}
+
+/* ====== 充電開始 ====== */
+function startCharging() {
+  state = STATE.CHARGING;
+
+  // 黒画面 → ロック画面へ
+  blackout.classList.add('hidden');
+
+  playChargeSound();
+  if (settings.vibrate && navigator.vibrate) navigator.vibrate(40);
+
+  // 充電インジケータと電池を充電中表示に
+  setTimeout(() => {
+    chargeIndicator.classList.add('show');
+    sbBattery.classList.add('charging');
+  }, 700);
+
+  // 残量を 実際−下げる量 → 実際 までアニメーション
+  const from = settings.realBattery - settings.startDiff;
+  const to = settings.realBattery;
+  const durationMs = Math.max(0.3, settings.chargeSec) * 1000;
+  const startTime = performance.now() + 1000; // 1秒待ってから上げ始める
+
+  function step(now) {
+    if (state !== STATE.CHARGING) return;
+    const elapsed = now - startTime;
+    if (elapsed < 0) {
+      setBatteryDisplay(from);
+    } else {
+      const p = Math.min(1, elapsed / durationMs);
+      // 緩やかに減速
+      const eased = 1 - Math.pow(1 - p, 2);
+      setBatteryDisplay(from + (to - from) * eased);
+      if (p >= 1) { chargeAnimId = null; return; }
+    }
+    chargeAnimId = requestAnimationFrame(step);
+  }
+  chargeAnimId = requestAnimationFrame(step);
+}
+
+/* ====== 充電接続音(Web Audioで生成) ====== */
+let audioCtx = null;
+function unlockAudio() {
+  if (!settings.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) { /* 無視 */ }
+}
+function playChargeSound() {
+  if (!settings.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+    // iOSの充電接続音っぽい2音
+    const notes = [
+      { f: 784, t: 0.0 },  // G5
+      { f: 1175, t: 0.12 }, // D6
+    ];
+    notes.forEach(({ f, t }) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, now + t);
+      gain.gain.linearRampToValueAtTime(0.25, now + t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.45);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now + t);
+      osc.stop(now + t + 0.5);
+    });
+  } catch (e) { /* 無音でも続行 */ }
+}
+
+/* ====== 画面を消さない(可能なら) ====== */
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch (e) { /* 失敗しても無視 */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+
+/* ====== 長押しで武装(arm) ====== */
+const LONG_PRESS_MS = 1200;
+const MOVE_TOLERANCE = 12;
+let pressTimer = null;
+let startX = 0, startY = 0;
+
+function onPressStart(e) {
+  if (state !== STATE.BLACK) return;
+  if (setupPanel.classList.contains('open')) return;
+  const p = e.touches ? e.touches[0] : e;
+  startX = p.clientX; startY = p.clientY;
+  clearTimeout(pressTimer);
+  pressTimer = setTimeout(() => {
+    // 武装 → 合図 → 遅延後に充電
+    state = STATE.ARMED;
+    armConfirm();
+    unlockAudio();   // 初回ユーザー操作で音を解放(iOS対策)
+    requestWakeLock();
+    armTimer = setTimeout(startCharging, settings.delaySec * 1000);
+  }, LONG_PRESS_MS);
+}
+function onPressMove(e) {
+  if (!pressTimer) return;
+  const p = e.touches ? e.touches[0] : e;
+  if (Math.abs(p.clientX - startX) > MOVE_TOLERANCE ||
+      Math.abs(p.clientY - startY) > MOVE_TOLERANCE) {
+    clearTimeout(pressTimer); pressTimer = null;
+  }
+}
+function onPressEnd() {
+  clearTimeout(pressTimer); pressTimer = null;
+}
+
+blackout.addEventListener('touchstart', onPressStart, { passive: true });
+blackout.addEventListener('touchmove', onPressMove, { passive: true });
+blackout.addEventListener('touchend', onPressEnd);
+blackout.addEventListener('touchcancel', onPressEnd);
+// マウス(PC確認用)
+blackout.addEventListener('mousedown', onPressStart);
+blackout.addEventListener('mousemove', onPressMove);
+blackout.addEventListener('mouseup', onPressEnd);
+
+// 黒画面でのコンテキストメニュー抑制(長押しメニュー対策)
+blackout.addEventListener('contextmenu', (e) => e.preventDefault());
+
+/* ====== 左上3回タップで設定を開く ====== */
+let tapCount = 0;
+let tapTimer = null;
+function cornerTap() {
+  tapCount++;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => { tapCount = 0; }, 700);
+  if (tapCount >= 3) {
+    tapCount = 0;
+    openSetup();
+  }
+}
+setupCorner.addEventListener('touchstart', (e) => { e.preventDefault(); cornerTap(); });
+setupCorner.addEventListener('click', cornerTap);
+
+/* ====== 設定パネル ====== */
+function openSetup() {
+  // 充電中なども含めいったん停止
+  if (armTimer) { clearTimeout(armTimer); armTimer = null; }
+  if (chargeAnimId) { cancelAnimationFrame(chargeAnimId); chargeAnimId = null; }
+  state = STATE.BLACK;
+
+  $('in-real').value = settings.realBattery;
+  $('in-diff').value = settings.startDiff;
+  $('in-delay').value = settings.delaySec;
+  $('in-chargesec').value = settings.chargeSec;
+  $('in-vibrate').checked = settings.vibrate;
+  $('in-sound').checked = settings.sound;
+  $('in-flash').checked = settings.flash;
+  setupPanel.classList.add('open');
+}
+
+function closeSetupAndStart() {
+  settings.realBattery = clampNum($('in-real').value, 1, 100, DEFAULTS.realBattery);
+  settings.startDiff = clampNum($('in-diff').value, 0, 20, DEFAULTS.startDiff);
+  settings.delaySec = clampNum($('in-delay').value, 0, 30, DEFAULTS.delaySec, true);
+  settings.chargeSec = clampNum($('in-chargesec').value, 1, 60, DEFAULTS.chargeSec);
+  settings.vibrate = $('in-vibrate').checked;
+  settings.sound = $('in-sound').checked;
+  settings.flash = $('in-flash').checked;
+  saveSettings(settings);
+
+  setupPanel.classList.remove('open');
+  goBlack();
+}
+function clampNum(v, min, max, fallback, allowFloat) {
+  let n = allowFloat ? parseFloat(v) : parseInt(v, 10);
+  if (isNaN(n)) n = fallback;
+  return Math.max(min, Math.min(max, n));
+}
+$('btn-start').addEventListener('click', closeSetupAndStart);
+
+/* ====== 初期化 ====== */
+goBlack();
+// 初回は設定を開いておく(残量を入れてもらう)
+openSetup();
+
+/* ====== Service Worker(オフライン) ====== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>充電</title>
+
+  <!-- PWA / 全画面表示 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== ロック画面(iOS風) ===== -->
+  <div id="lockscreen">
+    <!-- ステータスバー -->
+    <div class="statusbar">
+      <div class="sb-left"><span id="sb-time">9:41</span></div>
+      <div class="sb-right">
+        <span class="sb-signal">
+          <i></i><i></i><i></i><i></i>
+        </span>
+        <span class="sb-wifi">
+          <svg viewBox="0 0 16 12" width="17" height="13"><path d="M8 11.2c.6 0 1.1-.5 1.1-1.1S8.6 9 8 9s-1.1.5-1.1 1.1.5 1.1 1.1 1.1zM8 6.3c1.3 0 2.5.5 3.4 1.3.3.3.7.3 1 0 .3-.3.3-.8 0-1.1C12.2 5.4 10.2 4.6 8 4.6S3.8 5.4 2.6 6.5c-.3.3-.3.8 0 1.1.3.3.7.3 1 0C4.5 6.8 5.7 6.3 8 6.3zM8 1.6c2.5 0 4.8 1 6.5 2.5.3.3.8.3 1.1 0 .3-.3.3-.8 0-1.1C13.6 1.2 10.9 0 8 0S2.4 1.2.4 3c-.3.3-.3.8 0 1.1.3.3.8.3 1.1 0C3.2 2.6 5.5 1.6 8 1.6z"/></svg>
+        </span>
+        <span class="sb-battery" id="sb-battery">
+          <span class="sb-batt-num" id="sb-batt-num"></span>
+          <span class="sb-batt-shell">
+            <span class="sb-batt-fill" id="sb-batt-fill"></span>
+            <svg class="sb-batt-bolt" id="sb-batt-bolt" viewBox="0 0 10 14" width="8" height="11"><path d="M6 0L0 8h3l-1 6 6-9H5l1-5z"/></svg>
+          </span>
+          <span class="sb-batt-cap"></span>
+        </span>
+      </div>
+    </div>
+
+    <!-- ロックアイコン -->
+    <div class="lock-icon">
+      <svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 1.5a4.5 4.5 0 00-4.5 4.5v2.2H6.2c-.9 0-1.7.8-1.7 1.7v9.9c0 .9.8 1.7 1.7 1.7h11.6c.9 0 1.7-.8 1.7-1.7v-9.9c0-.9-.8-1.7-1.7-1.7h-1.3V6A4.5 4.5 0 0012 1.5zm0 1.8A2.7 2.7 0 0114.7 6v2.2H9.3V6A2.7 2.7 0 0112 3.3z"/></svg>
+    </div>
+
+    <!-- 時計 -->
+    <div class="clock">
+      <div class="date" id="clock-date">6月5日 金曜日</div>
+      <div class="time" id="clock-time">9:41</div>
+    </div>
+
+    <!-- 充電インジケータ(中央に大きく出る) -->
+    <div class="charge-indicator" id="charge-indicator">
+      <div class="charge-battery">
+        <div class="charge-battery-fill" id="charge-battery-fill"></div>
+        <svg class="charge-bolt" viewBox="0 0 24 32"><path d="M14 0L2 18h7l-2 14 13-20h-8l2-12z"/></svg>
+      </div>
+      <div class="charge-percent" id="charge-percent">0%</div>
+    </div>
+
+    <!-- 下部 -->
+    <div class="bottom">
+      <div class="swipe-hint">スワイプで開く</div>
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+
+  <!-- ===== 黒画面(オフ風オーバーレイ) ===== -->
+  <div id="blackout">
+    <div class="arm-flash" id="arm-flash"></div>
+  </div>
+
+  <!-- ===== 隠しタップゾーン(左上3回タップで設定) ===== -->
+  <div id="setup-corner"></div>
+
+  <!-- ===== 設定パネル ===== -->
+  <div id="setup-panel">
+    <div class="setup-card">
+      <h1>仕込み設定</h1>
+      <p class="setup-note">演技前にこっそり設定。左上を3回タップでいつでも開けます。</p>
+
+      <label>実際のバッテリー残量(%)
+        <span class="hint">いまのiPhoneの残量をそのまま入れる</span>
+        <input type="number" id="in-real" min="1" max="100" inputmode="numeric" />
+      </label>
+
+      <label>開始時に下げる量(%)
+        <span class="hint">この分だけ低く表示してから充電で戻す</span>
+        <input type="number" id="in-diff" min="0" max="20" inputmode="numeric" />
+      </label>
+
+      <label>長押ししてから充電開始までの遅延(秒)
+        <input type="number" id="in-delay" min="0" max="30" step="0.5" inputmode="decimal" />
+      </label>
+
+      <label>充電アニメの時間(秒)
+        <span class="hint">下げた分を戻すのにかける時間</span>
+        <input type="number" id="in-chargesec" min="1" max="60" inputmode="numeric" />
+      </label>
+
+      <label class="row">
+        <span>バイブ(対応端末のみ)</span>
+        <input type="checkbox" id="in-vibrate" />
+      </label>
+
+      <label class="row">
+        <span>効果音(充電接続音)</span>
+        <input type="checkbox" id="in-sound" />
+      </label>
+
+      <label class="row">
+        <span>隅の光で合図(iPhone用)</span>
+        <input type="checkbox" id="in-flash" />
+      </label>
+
+      <div class="setup-buttons">
+        <button id="btn-start" class="primary">保存して黒画面へ</button>
+      </div>
+
+      <div class="setup-howto">
+        <h2>本番の流れ</h2>
+        <ol>
+          <li>黒画面の状態で、画面を<b>約1.2秒長押し</b> → セット完了(振動 or 隅が一瞬光る)</li>
+          <li>静電気を起こす演技をして、指を充電口に当てる</li>
+          <li>設定した遅延後に黒画面 → ロック画面に変わり充電開始</li>
+          <li>残量が元の数字まで上がっていく</li>
+          <li>次の演技に戻すには <b>左上を3回タップ</b> → 「保存して黒画面へ」</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
