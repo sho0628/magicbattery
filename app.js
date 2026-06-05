@@ -12,7 +12,8 @@ const DEFAULTS = {
   wallpaper: null,   // ロック画面の壁紙(dataURL)
   dim: 25,           // 壁紙の上の暗さ(0〜80)
   showClock: true,   // 時計・日付を表示するか
-  showStatusbar: true,// ニセのステータスバー(電波・電池)を表示するか
+  showStatusbar: false,// ニセのステータスバー(電波・電池)を表示するか(既定OFF=本体のバーを使う)
+  startScreen: 'lock',// 'lock' | 'black' 起動時の画面
   timeFormat: 'auto',// 'auto' | '12' | '24'
 };
 
@@ -136,11 +137,17 @@ function goBlack() {
   if (armTimer) { clearTimeout(armTimer); armTimer = null; }
   if (chargeAnimId) { cancelAnimationFrame(chargeAnimId); chargeAnimId = null; }
 
-  blackout.classList.remove('hidden');
-  diIsland.classList.remove('expanded');
+  diIsland.classList.remove('show', 'expanded');
   statusbarEl.classList.remove('hide');
   sbBattery.classList.remove('charging');
   applyLockscreen();
+
+  // 起動画面に応じて黒画面オーバーレイの有無を切替
+  if (settings.startScreen === 'black') {
+    blackout.classList.remove('hidden');
+  } else {
+    blackout.classList.add('hidden');
+  }
 
   // 開始残量(実際 − 下げる量)をセット
   const startPct = settings.realBattery - settings.startDiff;
@@ -169,11 +176,12 @@ function startCharging() {
   playChargeSound();
   if (settings.vibrate && navigator.vibrate) navigator.vibrate(40);
 
-  // Dynamic Islandを小さい状態から横に広げて充電表示
+  // 小さいピルで出現 → 少し遅れて横に広がる
   setTimeout(() => {
-    diIsland.classList.add('expanded');
+    diIsland.classList.add('show');
     statusbarEl.classList.add('hide');
     sbBattery.classList.add('charging');
+    setTimeout(() => diIsland.classList.add('expanded'), 200);
   }, 700);
 
   // 残量を 実際−下げる量 → 実際 までアニメーション
@@ -194,10 +202,11 @@ function startCharging() {
       setBatteryDisplay(from + (to - from) * eased);
       if (p >= 1) {
         chargeAnimId = null;
-        // 満充電表示まで上がったら、少し見せてからDIを畳む(実機の挙動に近い)
+        // 満充電表示まで上がったら、少し見せてからピルを畳んで消す
         setTimeout(() => {
           if (state === STATE.CHARGING) {
             diIsland.classList.remove('expanded');
+            diIsland.classList.remove('show');
             statusbarEl.classList.remove('hide');
           }
         }, 2500);
@@ -290,17 +299,19 @@ function onPressEnd() {
   clearTimeout(pressTimer); pressTimer = null;
 }
 
-blackout.addEventListener('touchstart', onPressStart, { passive: true });
-blackout.addEventListener('touchmove', onPressMove, { passive: true });
-blackout.addEventListener('touchend', onPressEnd);
-blackout.addEventListener('touchcancel', onPressEnd);
-// マウス(PC確認用)
-blackout.addEventListener('mousedown', onPressStart);
-blackout.addEventListener('mousemove', onPressMove);
-blackout.addEventListener('mouseup', onPressEnd);
-
-// 黒画面でのコンテキストメニュー抑制(長押しメニュー対策)
-blackout.addEventListener('contextmenu', (e) => e.preventDefault());
+// 黒画面・ロック画面のどちらでも長押しで武装できるよう両方に登録
+[blackout, lockscreen].forEach((el) => {
+  el.addEventListener('touchstart', onPressStart, { passive: true });
+  el.addEventListener('touchmove', onPressMove, { passive: true });
+  el.addEventListener('touchend', onPressEnd);
+  el.addEventListener('touchcancel', onPressEnd);
+  // マウス(PC確認用)
+  el.addEventListener('mousedown', onPressStart);
+  el.addEventListener('mousemove', onPressMove);
+  el.addEventListener('mouseup', onPressEnd);
+  // 長押しメニュー抑制
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+});
 
 /* ====== 左上3回タップで設定を開く ====== */
 let tapCount = 0;
@@ -335,6 +346,7 @@ function openSetup() {
   $('dim-val').textContent = settings.dim;
   $('in-showclock').checked = settings.showClock;
   $('in-showsb').checked = settings.showStatusbar;
+  $('in-startscreen').value = settings.startScreen;
   $('in-timeformat').value = settings.timeFormat;
   updateWallpaperPreview();
   setupPanel.classList.add('open');
@@ -403,6 +415,7 @@ function closeSetupAndStart() {
   settings.dim = clampNum($('in-dim').value, 0, 80, DEFAULTS.dim);
   settings.showClock = $('in-showclock').checked;
   settings.showStatusbar = $('in-showsb').checked;
+  settings.startScreen = $('in-startscreen').value;
   settings.timeFormat = $('in-timeformat').value;
   updateClock();
   saveSettings(settings);

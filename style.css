@@ -52,26 +52,37 @@ html, body {
 /* 暗さは最背面 */
 .ls-dim { z-index: 0; }
 
-/* ===== Dynamic Island(充電演出) ===== */
+/* ===== 充電演出(Dynamic Island風の小→大ピル) ===== */
+/* 本体の上部バーと重ならないよう画面中央寄りに表示する */
 .dynamic-island {
   position: fixed;
-  top: 11px;
+  top: 58%;
   left: 50%;
-  transform: translateX(-50%);
-  width: 126px;
-  height: 37px;
+  transform: translate(-50%, -50%) scale(.7);
+  width: 132px;
+  height: 38px;
   background: #000;
   border-radius: 20px;
-  z-index: 90;
+  z-index: 55;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 28px rgba(0,0,0,.4);
   transition:
+    opacity .3s ease,
+    transform .45s cubic-bezier(.34, 1.5, .5, 1),
     width .55s cubic-bezier(.34, 1.5, .5, 1),
     height .55s cubic-bezier(.34, 1.5, .5, 1),
     border-radius .4s ease;
+}
+/* 小さく出現 */
+.dynamic-island.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 .di-side {
   display: flex;
@@ -86,10 +97,10 @@ html, body {
 .di-right { color: #fff; font-size: 17px; font-weight: 600; }
 .di-percent { font-variant-numeric: tabular-nums; }
 .dynamic-island.expanded {
-  width: min(94vw, 376px);
-  height: 44px;
-  border-radius: 22px;
-  padding: 0 17px 0 21px;
+  width: min(82vw, 340px);
+  height: 46px;
+  border-radius: 23px;
+  padding: 0 18px 0 22px;
 }
 .dynamic-island.expanded .di-side {
   opacity: 1;
@@ -247,13 +258,15 @@ html, body {
 
 /* セット完了の隅の光 */
 .arm-flash {
-  position: absolute;
+  position: fixed;
   top: calc(var(--safe-top) + 8px);
   right: 14px;
+  z-index: 95;
   width: 9px; height: 9px;
   border-radius: 50%;
   background: #fff;
   opacity: 0;
+  pointer-events: none;
   box-shadow: 0 0 8px 2px rgba(255,255,255,.6);
 }
 .arm-flash.flash { animation: armflash .55s ease; }
