@@ -47,19 +47,91 @@ html, body {
   opacity: 0;
   pointer-events: none;
 }
-/* ステータスバー・時計などを暗さより前面に */
-#lockscreen > *:not(.ls-dim) { position: relative; z-index: 1; }
+/* 暗さは最背面 */
+.ls-dim { z-index: 0; }
 
-/* ステータスバー */
+/* ===== Dynamic Island(充電演出) ===== */
+.dynamic-island {
+  position: fixed;
+  top: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 126px;
+  height: 37px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 90;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  transition:
+    width .55s cubic-bezier(.34, 1.5, .5, 1),
+    height .55s cubic-bezier(.34, 1.5, .5, 1),
+    border-radius .4s ease;
+}
+.di-side {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity .2s ease;
+}
+.di-left { color: #fff; font-size: 16px; font-weight: 600; }
+.di-left .di-bolt { fill: var(--green); display: block; }
+.di-right { color: #fff; font-size: 17px; font-weight: 600; }
+.di-percent { font-variant-numeric: tabular-nums; }
+.dynamic-island.expanded {
+  width: min(94vw, 376px);
+  height: 44px;
+  border-radius: 22px;
+  padding: 0 17px 0 21px;
+}
+.dynamic-island.expanded .di-side {
+  opacity: 1;
+  transition: opacity .25s ease .25s;
+}
+.di-batt {
+  position: relative;
+  width: 26px; height: 13px;
+  border: 1.5px solid rgba(255,255,255,.55);
+  border-radius: 4px;
+  padding: 1.5px;
+  box-sizing: border-box;
+}
+.di-batt-fill {
+  display: block; height: 100%;
+  width: 81%;
+  background: var(--green);
+  border-radius: 2px;
+  transition: width .3s linear;
+}
+.di-batt-bolt { position: absolute; inset: 0; margin: auto; fill: #fff; }
+.di-batt-cap {
+  position: absolute;
+  right: -3px; top: 50%; transform: translateY(-50%);
+  width: 2px; height: 5px;
+  background: rgba(255,255,255,.55);
+  border-radius: 0 2px 2px 0;
+}
+
+/* ===== ステータスバー(隅) ===== */
 .statusbar {
-  width: 100%;
-  padding: calc(var(--safe-top) + 14px) 28px 0;
+  position: absolute;
+  top: 15px;
+  left: 0; right: 0;
+  z-index: 5;
+  padding: 0 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 15px;
   font-weight: 600;
+  transition: opacity .3s ease;
 }
+.statusbar.hide { opacity: 0; }
 .sb-right { display: flex; align-items: center; gap: 6px; }
 
 .sb-signal { display: inline-flex; align-items: flex-end; gap: 1.5px; height: 11px; }
@@ -106,89 +178,54 @@ html, body {
 #sb-battery.charging .sb-batt-fill { background: var(--green); }
 #sb-battery.charging .sb-batt-bolt { opacity: 1; }
 
-/* ロックアイコン */
-.lock-icon {
-  margin-top: 22px;
-  opacity: .92;
-}
-.lock-icon svg { fill: #fff; display: block; }
-
-/* 時計 */
+/* ===== 時計 ===== */
 .clock {
-  margin-top: 6px;
+  position: absolute;
+  top: calc(var(--safe-top) + 52px);
+  left: 0; right: 0;
+  z-index: 3;
   text-align: center;
 }
-.clock .date { font-size: 21px; font-weight: 600; margin-bottom: 2px; opacity: .95; }
+.clock .date { font-size: 21px; font-weight: 600; margin-bottom: 4px; opacity: .95; }
 .clock .time {
-  font-size: 86px;
+  font-size: 88px;
   font-weight: 600;
   letter-spacing: -2px;
-  line-height: 1.05;
+  line-height: 1.0;
 }
 
-/* 充電インジケータ */
-.charge-indicator {
-  margin-top: 40px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  opacity: 0;
-  transform: scale(.85);
-  transition: opacity .5s ease, transform .5s ease;
-  pointer-events: none;
-}
-.charge-indicator.show { opacity: 1; transform: scale(1); }
-
-.charge-battery {
-  position: relative;
-  width: 116px; height: 56px;
-  border: 3px solid rgba(255,255,255,0.85);
-  border-radius: 11px;
-  padding: 4px;
-}
-.charge-battery::after {
-  content: "";
-  position: absolute;
-  right: -8px; top: 50%; transform: translateY(-50%);
-  width: 5px; height: 20px;
-  background: rgba(255,255,255,0.85);
-  border-radius: 0 3px 3px 0;
-}
-.charge-battery-fill {
-  height: 100%;
-  width: 0%;
-  background: var(--green);
-  border-radius: 5px;
-  transition: width .4s linear;
-}
-.charge-bolt {
-  position: absolute;
-  inset: 0; margin: auto;
-  width: 30px; height: 40px;
-  fill: #fff;
-  filter: drop-shadow(0 0 2px rgba(0,0,0,.4));
-}
-.charge-percent {
-  font-size: 40px;
-  font-weight: 600;
-  color: var(--green);
-  min-width: 110px;
-}
-
-/* 下部 */
+/* ===== 下部(ライト/カメラ) ===== */
 .bottom {
   position: absolute;
-  bottom: calc(var(--safe-bottom) + 10px);
-  width: 100%;
-  text-align: center;
+  left: 0; right: 0;
+  bottom: calc(var(--safe-bottom) + 34px);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 44px;
 }
-.swipe-hint { font-size: 15px; opacity: .7; margin-bottom: 14px; font-weight: 500; }
+.ls-action {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: rgba(40,40,40,.5);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ls-action svg { width: 22px; height: 22px; fill: #fff; }
 .home-indicator {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--safe-bottom) + 8px);
+  z-index: 4;
   width: 134px; height: 5px;
   background: #fff;
   border-radius: 3px;
-  margin: 0 auto;
-  opacity: .9;
+  opacity: .85;
 }
 
 /* ===== 黒画面オーバーレイ ===== */

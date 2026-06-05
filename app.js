@@ -59,12 +59,13 @@ const clockEl = document.querySelector('.clock');
 const sbBattery = $('sb-battery');
 const sbBattNum = $('sb-batt-num');
 const sbBattFill = $('sb-batt-fill');
-const chargeIndicator = $('charge-indicator');
-const chargeFill = $('charge-battery-fill');
-const chargePercent = $('charge-percent');
+const statusbarEl = $('statusbar');
+const diIsland = $('dynamic-island');
+const diPercent = $('di-percent');
+const diBattFill = $('di-batt-fill');
 
 /* ====== 時計 ====== */
-const WEEK = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 
 // 端末が12時間制かどうかを検出(自動用)
 function deviceUses12h() {
@@ -99,7 +100,7 @@ function updateClock() {
   $('clock-time').textContent = t;
   $('sb-time').textContent = t;
   $('clock-date').textContent =
-    `${now.getMonth() + 1}月${now.getDate()}日 ${WEEK[now.getDay()]}`;
+    `${now.getMonth() + 1}月${now.getDate()}日 (${WEEK[now.getDay()]})`;
 }
 updateClock();
 setInterval(updateClock, 1000);
@@ -109,8 +110,8 @@ function setBatteryDisplay(pct) {
   pct = Math.max(0, Math.min(100, Math.round(pct)));
   sbBattNum.textContent = pct + '%';
   sbBattFill.style.width = pct + '%';
-  chargeFill.style.width = pct + '%';
-  chargePercent.textContent = pct + '%';
+  diBattFill.style.width = pct + '%';
+  diPercent.textContent = pct + '%';
 }
 
 /* ====== ロック画面の見た目を反映 ====== */
@@ -131,7 +132,8 @@ function goBlack() {
   if (chargeAnimId) { cancelAnimationFrame(chargeAnimId); chargeAnimId = null; }
 
   blackout.classList.remove('hidden');
-  chargeIndicator.classList.remove('show');
+  diIsland.classList.remove('expanded');
+  statusbarEl.classList.remove('hide');
   sbBattery.classList.remove('charging');
   applyLockscreen();
 
@@ -162,9 +164,10 @@ function startCharging() {
   playChargeSound();
   if (settings.vibrate && navigator.vibrate) navigator.vibrate(40);
 
-  // 充電インジケータと電池を充電中表示に
+  // Dynamic Islandを小さい状態から横に広げて充電表示
   setTimeout(() => {
-    chargeIndicator.classList.add('show');
+    diIsland.classList.add('expanded');
+    statusbarEl.classList.add('hide');
     sbBattery.classList.add('charging');
   }, 700);
 
@@ -184,7 +187,17 @@ function startCharging() {
       // 緩やかに減速
       const eased = 1 - Math.pow(1 - p, 2);
       setBatteryDisplay(from + (to - from) * eased);
-      if (p >= 1) { chargeAnimId = null; return; }
+      if (p >= 1) {
+        chargeAnimId = null;
+        // 満充電表示まで上がったら、少し見せてからDIを畳む(実機の挙動に近い)
+        setTimeout(() => {
+          if (state === STATE.CHARGING) {
+            diIsland.classList.remove('expanded');
+            statusbarEl.classList.remove('hide');
+          }
+        }, 2500);
+        return;
+      }
     }
     chargeAnimId = requestAnimationFrame(step);
   }

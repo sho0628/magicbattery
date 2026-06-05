@@ -20,8 +20,25 @@
   <div id="lockscreen">
     <!-- 壁紙の上の暗さ調整 -->
     <div class="ls-dim" id="ls-dim"></div>
+
+    <!-- Dynamic Island(充電演出) -->
+    <div class="dynamic-island" id="dynamic-island">
+      <div class="di-side di-left">
+        <svg class="di-bolt" viewBox="0 0 10 14" width="11" height="15"><path d="M6 0L0 8h3l-1 6 6-9H5l1-5z"/></svg>
+        <span>充電中</span>
+      </div>
+      <div class="di-side di-right">
+        <span class="di-percent" id="di-percent">81%</span>
+        <span class="di-batt">
+          <span class="di-batt-fill" id="di-batt-fill"></span>
+          <svg class="di-batt-bolt" viewBox="0 0 10 14" width="7" height="10"><path d="M6 0L0 8h3l-1 6 6-9H5l1-5z"/></svg>
+          <span class="di-batt-cap"></span>
+        </span>
+      </div>
+    </div>
+
     <!-- ステータスバー -->
-    <div class="statusbar">
+    <div class="statusbar" id="statusbar">
       <div class="sb-left"><span id="sb-time">9:41</span></div>
       <div class="sb-right">
         <span class="sb-signal">
@@ -41,31 +58,22 @@
       </div>
     </div>
 
-    <!-- ロックアイコン -->
-    <div class="lock-icon">
-      <svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 1.5a4.5 4.5 0 00-4.5 4.5v2.2H6.2c-.9 0-1.7.8-1.7 1.7v9.9c0 .9.8 1.7 1.7 1.7h11.6c.9 0 1.7-.8 1.7-1.7v-9.9c0-.9-.8-1.7-1.7-1.7h-1.3V6A4.5 4.5 0 0012 1.5zm0 1.8A2.7 2.7 0 0114.7 6v2.2H9.3V6A2.7 2.7 0 0112 3.3z"/></svg>
-    </div>
-
     <!-- 時計 -->
     <div class="clock">
-      <div class="date" id="clock-date">6月5日 金曜日</div>
+      <div class="date" id="clock-date">6月5日 (金)</div>
       <div class="time" id="clock-time">9:41</div>
     </div>
 
-    <!-- 充電インジケータ(中央に大きく出る) -->
-    <div class="charge-indicator" id="charge-indicator">
-      <div class="charge-battery">
-        <div class="charge-battery-fill" id="charge-battery-fill"></div>
-        <svg class="charge-bolt" viewBox="0 0 24 32"><path d="M14 0L2 18h7l-2 14 13-20h-8l2-12z"/></svg>
-      </div>
-      <div class="charge-percent" id="charge-percent">0%</div>
-    </div>
-
-    <!-- 下部 -->
+    <!-- 下部(ライト/カメラ) -->
     <div class="bottom">
-      <div class="swipe-hint">スワイプで開く</div>
-      <div class="home-indicator"></div>
+      <button class="ls-action" aria-label="ライト" tabindex="-1">
+        <svg viewBox="0 0 24 24"><path d="M9 2h6a1 1 0 011 1v3a1 1 0 01-.3.7l-1.2 1.2v12.6a1.5 1.5 0 01-3 0V7.9L10.3 6.7A1 1 0 0110 6V3a1 1 0 011-1zm1 2v1.6l1.2 1.2h1.6L14 5.6V4h-4z"/></svg>
+      </button>
+      <button class="ls-action" aria-label="カメラ" tabindex="-1">
+        <svg viewBox="0 0 24 24"><path d="M9.4 4l-1.2 1.6H5A2 2 0 003 7.6v10A2 2 0 005 19.6h14a2 2 0 002-2v-10a2 2 0 00-2-2h-3.2L14.6 4H9.4zM12 16.6a4 4 0 110-8 4 4 0 010 8z"/></svg>
+      </button>
     </div>
+    <div class="home-indicator"></div>
   </div>
 
   <!-- ===== 黒画面(オフ風オーバーレイ) ===== -->
