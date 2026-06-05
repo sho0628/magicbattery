@@ -12,6 +12,7 @@ const DEFAULTS = {
   wallpaper: null,   // ロック画面の壁紙(dataURL)
   dim: 25,           // 壁紙の上の暗さ(0〜80)
   showClock: true,   // 時計・日付を表示するか
+  timeFormat: 'auto',// 'auto' | '12' | '24'
 };
 
 const LS_KEY = 'magicChargeSettings';
@@ -64,11 +65,37 @@ const chargePercent = $('charge-percent');
 
 /* ====== 時計 ====== */
 const WEEK = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+
+// 端末が12時間制かどうかを検出(自動用)
+function deviceUses12h() {
+  try {
+    const opt = new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions();
+    if (typeof opt.hour12 === 'boolean') return opt.hour12;
+    if (opt.hourCycle) return opt.hourCycle === 'h11' || opt.hourCycle === 'h12';
+  } catch (e) { /* fallthrough */ }
+  return false; // 不明なら24時間制
+}
+
+// 実機のロック画面と同じ書式で時刻を作る(AM/PMは付けない)
+function formatTime(now) {
+  let h12;
+  if (settings.timeFormat === '12') h12 = true;
+  else if (settings.timeFormat === '24') h12 = false;
+  else h12 = deviceUses12h();
+
+  const m = String(now.getMinutes()).padStart(2, '0');
+  let h = now.getHours();
+  if (h12) {
+    h = h % 12;
+    if (h === 0) h = 12;       // 0時/12時 → 12
+    return `${h}:${m}`;        // 先頭ゼロなし
+  }
+  return `${String(h).padStart(2, '0')}:${m}`; // 24時間制は先頭ゼロあり
+}
+
 function updateClock() {
   const now = new Date();
-  const h = now.getHours();
-  const m = String(now.getMinutes()).padStart(2, '0');
-  const t = `${h}:${m}`;
+  const t = formatTime(now);
   $('clock-time').textContent = t;
   $('sb-time').textContent = t;
   $('clock-date').textContent =
@@ -289,6 +316,7 @@ function openSetup() {
   $('in-dim').value = settings.dim;
   $('dim-val').textContent = settings.dim;
   $('in-showclock').checked = settings.showClock;
+  $('in-timeformat').value = settings.timeFormat;
   updateWallpaperPreview();
   setupPanel.classList.add('open');
 }
@@ -355,6 +383,8 @@ function closeSetupAndStart() {
   settings.flash = $('in-flash').checked;
   settings.dim = clampNum($('in-dim').value, 0, 80, DEFAULTS.dim);
   settings.showClock = $('in-showclock').checked;
+  settings.timeFormat = $('in-timeformat').value;
+  updateClock();
   saveSettings(settings);
 
   setupPanel.classList.remove('open');
